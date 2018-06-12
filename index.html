@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>Chat Near</title>
+	<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
+  	<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.0/jquery.min.js"></script>
+  	<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
+  	<script src="/socket.io/socket.io.js"></script>
+
+  	<style>
+  		body{
+  			margin-top: 30px;
+  		}
+
+  		#messageArea{
+  			display: none;
+  		}
+
+  		#chatPanel{
+  			display: none;
+  		}
+
+  		#chatArea{
+  			
+  		}
+
+  		#chatBody{
+  			min-height: 300px;
+  			max-height: 300px;
+  			overflow-y: scroll;
+  		}
+
+  		.panel-body{
+  			min-height: 300px;
+  			max-height: 300px;
+  			overflow-y: scroll;
+  		}
+
+  		#users{
+  			min-height: 300px;
+  			max-height: 300px;
+  			overflow-y: scroll;
+  		}
+
+  		#success-alert{
+  			display: none;
+  		}
+
+  		.well-receive{
+  			background-color: #5cb85c;
+  			color: #ffffff;
+  		}
+
+  		.well-sent{
+  			background-color: #777777;
+  			color: #ffffff;
+  			position: absolute;
+  			right: 10;
+  		}
+
+  		.chatpanel{
+  			display: none;
+  		}
+
+  		.chat{
+    		list-style: none;
+    		margin: 0;
+    		padding: 0;
+		}
+
+		.chat li{
+    		margin-bottom: 10px;
+    		padding-bottom: 5px;
+    		border-bottom: 1px dotted #B3A9A9;
+		}
+
+		.chat li.left .chat-body{
+    		margin-left: 60px;
+    		
+		}
+
+		.chat li.right .chat-body{
+    		margin-right: 60px;
+    		
+		}
+
+
+		.chat li.right .chat-body p{
+    		margin: 0;
+    		/*background-color: #777777;
+    		color: #ffffff;*/
+    		overflow-wrap: break-word;
+		}
+
+		.chat li.left .chat-body p{
+    		margin: 0;
+    		/*background-color: #5cb85c;
+    		color: #ffffff;*/
+    		overflow-wrap: break-word;
+		}
+
+  	</style>
+</head>
+<body>
+<div class="container">
+
+	<div id="userFormArea" class="row">
+		<div class="col-md-12">
+			<form id="userForm">
+				<div class="form-group">
+					<label>Username</label>
+					<input id="username"/>
+					<br>
+					<input type="submit" class="btn btn-primary" value="Login"/>
+				</div>
+			</form>
+		</div>
+	</div>
+
+
+	<div class="row" id="chatPanel">
+		<div class="col-md-4">
+			<div class="panel panel-primary">
+				<div class="panel-heading">
+					<h3 class="panel-title"><span class="glyphicon glyphicon-user"></span> Nearby Users</h3>
+				</div>
+
+				<div class="panel-body all-users" id="users"></div>
+
+				<div class="panel-footer">
+					<div class="input-group">
+						<button class="btn btn-primary btn-sm"><span class="glyphicon glyphicon-camera"></span></button>
+						<button class="btn btn-primary btn-sm"><span class="glyphicon glyphicon-earphone"></span></button>
+						<button class="btn btn-primary btn-sm"><span class="glyphicon glyphicon-sunglasses"></span></button>
+					</div>
+					<div class="alert alert-success" id="success-alert">    					
+    					<strong>From User </strong>
+    					Message content
+					</div>
+				</div>
+			</div>
+		</div>
+
+		<div class="col-md-8" id="chatArea">
+
+			
+
+			
+		</div>
+	</div>
+
+
+
+</div>
+
+
+<script type="text/javascript">
+	$(function(){
+		var socket = io.connect();
+		var $userForm = $('#userForm');
+		var $userFormArea = $('#userFormArea');
+		var $users = $('#users');
+		var $username = $('#username');
+		var $chatPanel = $('#chatPanel');
+		
+		
+		var $chatArea = $('#chatArea');
+
+		var thisUser;
+
+		$chatArea.on('keypress', 'input.send', function(e){
+			if(e.which == 13){
+				var msg = $(this).val();
+				if (msg == '' || msg.trim() == '') {
+					$(this).val('');
+					return;
+				};
+				e.preventDefault();
+				var from = thisUser;
+				var to = $(this).attr('sendto');
+				
+				$(this).val('');
+				sendMessage(msg, from, to);
+			};
+			
+		});
+
+		function sendMessage(message, fromuser, touser){
+
+			var data ={
+				from : fromuser,
+				to : touser,
+				msg : message
+			};
+
+			socket.emit('send message', data);
+		};
+
+		function FormatTime(time){
+			var hours = time.getHours();
+			var minute = time.getMinutes();
+			var seccond = time.getSeconds();
+
+			var H = hours<10? '0'+hours:hours;
+			var M = minute<10? '0'+minute:minute;
+			var S = seccond<10? '0'+seccond:seccond;
+
+			return H+':'+M+':'+S;
+		}
+
+		function createChatPanel(chatid){
+			var str = '<div class="panel panel-primary chatpanel chat'+chatid+'" id="chatwith'+chatid+'"><div class="panel-heading"><h3 class="panel-title"><span class="glyphicon glyphicon-comment"></span> '+chatid+'</h3></div><div class="panel-body chatwith'+chatid+'" id="chatBody"><ul class="chat chatlist'+chatid+'"></ul></div><div class="panel-footer"><div class="input-group"><input type="text" class="form-control input-sm send" placeholder="Type..." id="sendTxt" sendto="'+chatid+'"><span class="input-group-btn"><button class="btn btn-primary btn-sm send" id="sendBtn"><span class="glyphicon glyphicon-send"></span></button></span></div></div></div>';
+
+			$chatArea.append(str);
+		};
+
+		$('.all-users').on('click', 'div', function(e){
+			e.preventDefault();
+			var id = $(this).attr('id');
+			$('.chatpanel').hide();
+			$('.chat'+id).show();
+		});
+
+
+		socket.on('new message', function(data){
+			var $chatwith;
+			var date = new Date(data.time);
+			var timetag = FormatTime(date);
+			
+			if(data.from == thisUser){
+				//var msg = '<div class="well well-sm well-sent">'+data.msg+'</p></div>';
+				var msg = '<li class="right clearfix"><span class="chat-img pull-right"><img src="http://placehold.it/50/777777/fff&text=ME" alt="User Avatar" class="img-circle" /></span><div class="chat-body clearfix"><div class="header"><small class=" text-muted"><span class="glyphicon glyphicon-time"></span>'+timetag+'</small><strong class="pull-right primary-font">'+data.from+'</strong></div><p>'+data.msg+'</p></div></li>';
+				$chatwith = $('.chatwith'+data.to);
+				$chatlist = $('.chatlist'+data.to);
+				$chatlist.append(msg);
+
+				//$chatwith.append(msg);
+				$chatwith.scrollTop($chatwith[0].scrollHeight);
+			};
+
+			if(data.to == thisUser){
+				//msg = '<div class="well well-sm well-receive">'+data.msg+'</p></div>';
+				var msg = '<li class="left clearfix"><span class="chat-img pull-left"><img src="http://placehold.it/50/5cb85c/fff&text=U" alt="User Avatar" class="img-circle" /></span><div class="chat-body clearfix"><div class="header"><strong class="primary-font">'+data.from+'</strong><small class="pull-right text-muted"><span class="glyphicon glyphicon-time"></span>'+timetag+'</small></div><p>'+data.msg+'</p></div></li>';
+				$chatwith = $('.chatwith'+data.from);
+				$chatlist = $('.chatlist'+data.from);
+				$chatlist.append(msg);
+				//$chatwith.append(msg);
+				$chatwith.scrollTop($chatwith[0].scrollHeight);
+				$("#success-alert").html('<strong>'+data.from+': </strong>'+data.msg.substring(0,20)+' ...');
+				$("#success-alert").fadeTo(2000, 500).slideUp(500, function(){
+					$("#success-alert").slideUp(500);
+				});
+			};	
+
+		});
+
+		$userForm.submit(function(e){
+			e.preventDefault();
+			thisUser = $username.val();
+			socket.emit('new user', $username.val(), function(data){
+				if(data){
+					$userFormArea.hide();
+					$chatPanel.show();
+				}
+			});
+			$username.val('');
+		});
+
+		socket.on('get users', function(data){
+			var html = '';
+			for(i=0; i<data.length; i++){
+				if(thisUser != data[i]){
+					if($('#chatwith'+data[i]).length == 0){
+						createChatPanel(data[i]);
+					};
+					html+= '<div class="list-group-item some-user" id="'+data[i]+'">'+data[i]+'</div>';
+				};
+			};
+			$users.html(html);
+		});
+	});
+</script>
+</body>
+</html>
